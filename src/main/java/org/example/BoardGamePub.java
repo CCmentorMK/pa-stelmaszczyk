@@ -1,16 +1,21 @@
 package org.example;
 
+import org.example.game.Game;
+import org.example.game.GameType;
+import org.example.helpers.Printer;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class BoardGamePub {
-
     private String location;
-
+    private boolean storytellingInProgress;
+    private Printer printer;
     private List<Game> games;
 
-    public BoardGamePub(String location, List<Game> games) {
+    public BoardGamePub(String location, Printer printer) {
         this.location = location;
+        this.printer = printer;
         this.games = new ArrayList<>();
     }
 
@@ -27,47 +32,54 @@ public class BoardGamePub {
     }
 
     public List<Game> getFreeGames() {
-        List<Game> freeGames = new ArrayList<Game>();
+        List<Game> availableGames = new ArrayList<>();
         for (Game game : games) {
-            if (!game.isFree()) {
-                freeGames.add(game);
+            if (!game.getGameStatus()) {
+                availableGames.add(game);
             }
         }
-        return freeGames;
+        return availableGames;
     }
 
+    public void startGame(Game game, List<Player> players) {
+        if(!checkIfGameCanStartWithPlayers(game,players)){
+            printer.info("There are not enough players to start" + game.getName() );
+            return;
+        }
 
-    public void startGame(Game game){
-        if(game.getGameType().equals(GameType.PUZZLE)){
-            if(game.getPlayers().size() == 1){
-                game.setFree(true);
-                System.out.println("The puzzle game has been started.");
+        if(game.getGameType() == GameType.STORYTELLING) {
+            if (!storytellingInProgress) {
+                storytellingInProgress = true;
             }else{
-                System.out.println("Sorry there are not enough players.");
+                printer.info("The storytelling game is really fun and loud, so they can't be played simultaneously in the same pub. You have to wait until it's over.");
+                return;
             }
-        }else if(game.getGameType().equals(GameType.CARDGAME) && game.getGameType().equals(GameType.STORYTELLING)){
-            if(game.getPlayers().size() < 1){
-                game.setFree(true);
-                System.out.println("Sorry there are not enough players.");
-            }else{
-                System.out.println("The game has been started.");
-            }
+        }
+
+        game.changeGameStatus(true);
+        addGameToPlayerGameHistory(game, players);
+        printer.info(game.getName() + " game has been started.");
+    }
+
+
+    private void addGameToPlayerGameHistory(Game game, List<Player> players) {
+        for(Player player : players){
+            player.addGameToHistory(game);
         }
     }
 
-    public void onSiteGame(Game game){
-        if(game.getGameAvaliable().equals(GameAvaliable.ONSITE)){
-            game.setLocation(location);
+    private boolean checkIfGameCanStartWithPlayers(Game game, List<Player> players) {
+        return players.size() >= game.getMinPlayers() && players.size() <= game.getMaxPlayers();
+    }
+
+    public void endGame(Game game){
+        game.changeGameStatus(false);
+        if(game.getGameType() == GameType.STORYTELLING) {
+            storytellingInProgress = false;
         }
     }
 
-
-    public void stopGame(Game game){
-
+    public String getLocation() {
+        return location;
     }
-
-    //funkcja do sprawdzania czy w danym barze odbywa się gra Storytelling
-
-
-
 }
